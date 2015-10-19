@@ -128,7 +128,7 @@ public abstract class BaseParser
         this.seqSource = pdfSource;
     }
 
-    private static boolean isHexDigit(char ch)
+    protected static boolean isHexDigit(char ch)
     {
         return isDigit(ch) ||
         (ch >= 'a' && ch <= 'f') ||
@@ -574,7 +574,7 @@ public abstract class BaseParser
      *
      * @throws IOException If there is an error reading from the stream.
      */
-    private COSString parseCOSHexString() throws IOException
+    protected COSString parseCOSHexString() throws IOException
     {
         final StringBuilder sBuf = new StringBuilder();
         while( true )
@@ -716,10 +716,12 @@ public abstract class BaseParser
     protected COSName parseCOSName() throws IOException
     {
         readExpectedChar('/');
+        int nameLength = 0;
         ByteArrayOutputStream buffer = new ByteArrayOutputStream();
         int c = seqSource.read();
         while (c != -1)
         {
+            nameLength++;
             int ch = c;
             if (ch == '#')
             {
@@ -767,7 +769,7 @@ public abstract class BaseParser
             seqSource.unread(c);
         }
         String string = new String(buffer.toByteArray(), Charsets.UTF_8);
-        return COSName.getPDFName(string);
+        return COSName.getPDFName(string, nameLength);
     }
 
     /**
@@ -999,7 +1001,9 @@ public abstract class BaseParser
      */
     protected final void readExpectedString(final char[] expectedString, boolean skipSpaces) throws IOException
     {
-        skipSpaces();
+        if (skipSpaces) {
+            skipSpaces();
+        }
         for (char c : expectedString)
         {
             if (seqSource.read() != c)
@@ -1009,7 +1013,9 @@ public abstract class BaseParser
                         + seqSource.getPosition());
             }
         }
-        skipSpaces();
+        if (skipSpaces) {
+            skipSpaces();
+        }
     }
 
     /**
@@ -1227,11 +1233,13 @@ public abstract class BaseParser
     /**
      * This will skip all spaces and comments that are present.
      *
+     * @return number of spaces skipped
      * @throws IOException If there is an error reading from the stream.
      */
-    protected void skipSpaces() throws IOException
+    protected int skipSpaces() throws IOException
     {
         int c = seqSource.read();
+        int count = 1;
         // 37 is the % character, a comment
         while( isWhitespace(c) || c == 37)
         {
@@ -1242,17 +1250,21 @@ public abstract class BaseParser
                 while(!isEOL(c) && c != -1)
                 {
                     c = seqSource.read();
+                    count++;
                 }
             }
             else
             {
                 c = seqSource.read();
             }
+            count++;
         }
         if (c != -1)
         {
             seqSource.unread(c);
+            count--;
         }
+        return count;
     }
 
     /**

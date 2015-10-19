@@ -1245,7 +1245,7 @@ public class COSParser extends BaseParser
      * 
      * @throws IOException if something went wrong.
      */
-    private void checkXrefOffsets() throws IOException
+    protected void checkXrefOffsets() throws IOException
     {
         // repair mode isn't available in non-lenient mode
         if (!isLenient)
@@ -1290,7 +1290,7 @@ public class COSParser extends BaseParser
      * @return returns true if the given object can be dereferenced at the given offset
      * @throws IOException if something went wrong
      */
-    private boolean checkObjectKeys(COSObjectKey objectKey, long offset) throws IOException
+    protected boolean checkObjectKeys(COSObjectKey objectKey, long offset) throws IOException
     {
         // there can't be any object at the very beginning of a pdf
         if (offset < MINIMUM_SEARCH_OFFSET)
@@ -1304,7 +1304,7 @@ public class COSParser extends BaseParser
         String objectString = createObjectString(objectNr, objectGen);
         try 
         {
-            if (isString(objectString.getBytes(ISO_8859_1)))
+            if (checkObjectHeader(objectString))
             {
                 // everything is ok, return origin object key
                 source.seek(originOffset);
@@ -1329,7 +1329,7 @@ public class COSParser extends BaseParser
      * @param genID the generation id
      * @return the generated string
      */
-    private String createObjectString(long objectID, int genID)
+    protected String createObjectString(long objectID, int genID)
     {
         return Long.toString(objectID) + " " + Integer.toString(genID) + " obj";
     }
@@ -1682,6 +1682,10 @@ public class COSParser extends BaseParser
             startXref = readLong();
         }
         return startXref;
+    }
+
+    protected boolean checkObjectHeader(String objectString) throws IOException {
+        return isString(objectString.getBytes(ISO_8859_1));
     }
     
     /**

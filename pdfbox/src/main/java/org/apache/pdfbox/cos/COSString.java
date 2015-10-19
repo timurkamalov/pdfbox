@@ -43,7 +43,7 @@ import org.apache.pdfbox.util.Hex;
  * @author Ben Litchfield
  * @author John Hewson
  */
-public final class COSString extends COSBase
+public class COSString extends COSBase
 {
     private static final Log LOG = LogFactory.getLog(COSString.class);
 

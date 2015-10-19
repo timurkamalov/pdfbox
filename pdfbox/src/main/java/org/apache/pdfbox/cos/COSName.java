@@ -550,6 +550,7 @@ public final class COSName extends COSBase implements Comparable<COSName>
     // fields
     private final String name;
     private final int hashCode;
+    private final int originalLength;
 
     /**
      * This will get a COSName object with that name.
@@ -559,6 +560,19 @@ public final class COSName extends COSBase implements Comparable<COSName>
      * @return A COSName with the specified name.
      */
     public static COSName getPDFName(String aName)
+    {
+        return getPDFName(aName, 0);
+    }
+
+    /**
+     * This will get a COSName object with that name and original length.
+     *
+     * @param aName The name of the object.
+     * @param originalLength The original length of the name
+     *
+     * @return A COSName with the specified name.
+     */
+    public static COSName getPDFName(String aName, int originalLength)
     {
         COSName name = null;
         if (aName != null)
@@ -572,7 +586,7 @@ public final class COSName extends COSBase implements Comparable<COSName>
                 if (name == null)
                 {
                     // name is added to the synchronized map in the constructor
-                    name = new COSName(aName, false);
+                    name = new COSName(aName, false, originalLength);
                 }
             }
         }
@@ -586,9 +600,10 @@ public final class COSName extends COSBase implements Comparable<COSName>
      * @param staticValue Indicates if the COSName object is static so that it can be stored in the HashMap without
      * synchronizing.
      */
-    private COSName(String aName, boolean staticValue)
+    private COSName(String aName, boolean staticValue, int originalLength)
     {
         name = aName;
+        this.originalLength = originalLength;
         if (staticValue)
         {
             commonNameMap.put(aName, this);
@@ -607,7 +622,7 @@ public final class COSName extends COSBase implements Comparable<COSName>
      */
     private COSName(String aName)
     {
-        this(aName, true);
+        this(aName, true, 0);
     }
 
     /**
@@ -618,6 +633,15 @@ public final class COSName extends COSBase implements Comparable<COSName>
     public String getName()
     {
         return name;
+    }
+
+    /**
+     * This will get the original length of the object
+     *
+     * @return The originalLength of the object
+     */
+    public int getOriginalLength() {
+        return originalLength;
     }
 
     @Override
