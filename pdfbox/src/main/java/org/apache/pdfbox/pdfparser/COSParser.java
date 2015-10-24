@@ -16,39 +16,17 @@
  */
 package org.apache.pdfbox.pdfparser;
 
-import java.io.IOException;
-import java.io.OutputStream;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Collection;
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.Iterator;
-import java.util.LinkedList;
-import java.util.List;
-import java.util.Map;
-import java.util.Map.Entry;
-import java.util.Queue;
-import java.util.Set;
-import java.util.TreeMap;
-import java.util.Vector;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.apache.pdfbox.cos.COSArray;
-import org.apache.pdfbox.cos.COSBase;
-import org.apache.pdfbox.cos.COSDictionary;
-import org.apache.pdfbox.cos.COSDocument;
-import org.apache.pdfbox.cos.COSName;
-import org.apache.pdfbox.cos.COSNull;
-import org.apache.pdfbox.cos.COSNumber;
-import org.apache.pdfbox.cos.COSObject;
-import org.apache.pdfbox.cos.COSObjectKey;
-import org.apache.pdfbox.cos.COSStream;
+import org.apache.pdfbox.cos.*;
 import org.apache.pdfbox.io.RandomAccessRead;
 import org.apache.pdfbox.pdfparser.XrefTrailerResolver.XRefType;
 import org.apache.pdfbox.pdmodel.encryption.SecurityHandler;
 
+import java.io.IOException;
+import java.io.OutputStream;
+import java.util.*;
+import java.util.Map.Entry;
 
 import static org.apache.pdfbox.util.Charsets.ISO_8859_1;
 
@@ -729,7 +707,7 @@ public class COSParser extends BaseParser
         return pdfObject.getObject();
     }
 
-    private void parseFileObject(Long offsetOrObjstmObNr, final COSObjectKey objKey, final COSObject pdfObject) throws IOException
+    protected void parseFileObject(Long offsetOrObjstmObNr, final COSObjectKey objKey, final COSObject pdfObject) throws IOException
     {
         // ---- go to object start
         source.seek(offsetOrObjstmObNr);
@@ -839,7 +817,7 @@ public class COSParser extends BaseParser
     /** 
      * Returns length value referred to or defined in given object. 
      */
-    private COSNumber getLength(final COSBase lengthBaseObj, final COSName streamType) throws IOException
+    protected COSNumber getLength(final COSBase lengthBaseObj, final COSName streamType) throws IOException
     {
         if (lengthBaseObj == null)
         {
@@ -1001,7 +979,7 @@ public class COSParser extends BaseParser
      * 
      * @throws IOException if something went wrong
      */
-    private void readUntilEndStream( final OutputStream out ) throws IOException
+    protected void readUntilEndStream( final OutputStream out ) throws IOException
     {
         int bufSize;
         int charMatchCount = 0;
@@ -1095,7 +1073,7 @@ public class COSParser extends BaseParser
         out.flush();
     }
 
-    private void readValidStream(OutputStream out, COSNumber streamLengthObj) throws IOException
+    protected void readValidStream(OutputStream out, COSNumber streamLengthObj) throws IOException
     {
         long remainBytes = streamLengthObj.longValue();
         while (remainBytes > 0)
@@ -1113,7 +1091,7 @@ public class COSParser extends BaseParser
         }
     }
 
-    private boolean validateStreamLength(long streamLength) throws IOException
+    protected boolean validateStreamLength(long streamLength) throws IOException
     {
         boolean streamLengthIsValid = true;
         long originOffset = source.getPosition();
