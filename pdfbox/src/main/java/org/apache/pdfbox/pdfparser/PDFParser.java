@@ -16,27 +16,18 @@
  */
 package org.apache.pdfbox.pdfparser;
 
-import java.io.IOException;
-import java.io.InputStream;
-import java.security.KeyStore;
-
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.apache.pdfbox.cos.COSBase;
-import org.apache.pdfbox.cos.COSDictionary;
-import org.apache.pdfbox.cos.COSDocument;
-import org.apache.pdfbox.cos.COSName;
-import org.apache.pdfbox.cos.COSNull;
-import org.apache.pdfbox.cos.COSObject;
+import org.apache.pdfbox.cos.*;
 import org.apache.pdfbox.io.IOUtils;
 import org.apache.pdfbox.io.RandomAccessRead;
 import org.apache.pdfbox.io.ScratchFile;
 import org.apache.pdfbox.pdmodel.PDDocument;
-import org.apache.pdfbox.pdmodel.encryption.AccessPermission;
-import org.apache.pdfbox.pdmodel.encryption.DecryptionMaterial;
-import org.apache.pdfbox.pdmodel.encryption.PDEncryption;
-import org.apache.pdfbox.pdmodel.encryption.PublicKeyDecryptionMaterial;
-import org.apache.pdfbox.pdmodel.encryption.StandardDecryptionMaterial;
+import org.apache.pdfbox.pdmodel.encryption.*;
+
+import java.io.IOException;
+import java.io.InputStream;
+import java.security.KeyStore;
 
 public class PDFParser extends COSParser
 {
@@ -156,6 +147,10 @@ public class PDFParser extends COSParser
                         + " does not contain an integer value, but: '" + eofLookupRangeStr + "'");
             }
         }
+        initializeCOSDocument(scratchFile);
+    }
+
+    protected void initializeCOSDocument(ScratchFile scratchFile) {
         document = new COSDocument(scratchFile);
     }
     

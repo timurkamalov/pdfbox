@@ -1,11 +1,20 @@
 package org.apache.pdfbox.cos.validation;
 
+import org.apache.pdfbox.cos.COSDictionary;
 import org.apache.pdfbox.cos.COSDocument;
+import org.apache.pdfbox.io.ScratchFile;
 
 /**
  * @author Timur Kamalov
  */
 public class ValidationCOSDocument extends COSDocument {
+
+	/** Last document trailer. It differs from the simple trailer only if pdf file is linearized
+	 */
+	private COSDictionary lastTrailer;
+
+	//contains clean first trailer of document
+	private COSDictionary firstPageTrailer;
 
 	private long postEOFDataSize;
 
@@ -20,6 +29,26 @@ public class ValidationCOSDocument extends COSDocument {
 	private boolean isSubsectionHeaderSpaceSeparated = true;
 
 	private boolean isLinearized;
+
+	public ValidationCOSDocument(ScratchFile scratchFile) {
+		super(scratchFile);
+	}
+
+	public COSDictionary getLastTrailer() {
+		return lastTrailer;
+	}
+
+	public void setLastTrailer(COSDictionary lastTrailer) {
+		this.lastTrailer = lastTrailer;
+	}
+
+	public COSDictionary getFirstPageTrailer() {
+		return firstPageTrailer;
+	}
+
+	public void setFirstPageTrailer(COSDictionary firstPageTrailer) {
+		this.firstPageTrailer = firstPageTrailer;
+	}
 
 	public long getPostEOFDataSize() {
 		return postEOFDataSize;

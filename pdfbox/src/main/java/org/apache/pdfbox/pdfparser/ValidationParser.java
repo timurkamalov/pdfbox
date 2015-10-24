@@ -8,6 +8,8 @@ import org.apache.pdfbox.cos.validation.ValidationCOSObject;
 import org.apache.pdfbox.cos.validation.ValidationCOSStream;
 import org.apache.pdfbox.cos.validation.ValidationCOSString;
 import org.apache.pdfbox.io.RandomAccessRead;
+import org.apache.pdfbox.io.ScratchFile;
+import org.apache.pdfbox.pdmodel.PDDocument;
 
 import java.io.IOException;
 import java.io.OutputStream;
@@ -29,6 +31,19 @@ public class ValidationParser extends PDFParser {
 
 	public ValidationParser(RandomAccessRead source) throws IOException {
 		super(source);
+	}
+
+	@Override
+	public PDDocument getPDDocument() throws IOException {
+		ValidationCOSDocument cosDocument = (ValidationCOSDocument) getDocument();
+		cosDocument.setLastTrailer(getLastTrailer());
+		cosDocument.setFirstPageTrailer(getFirstTrailer());
+		return super.getPDDocument();
+	}
+
+	@Override
+	protected void initializeCOSDocument(ScratchFile scratchFile) {
+		document = new ValidationCOSDocument(scratchFile);
 	}
 
 	@Override
