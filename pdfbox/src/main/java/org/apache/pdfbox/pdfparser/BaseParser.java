@@ -16,25 +16,14 @@
  */
 package org.apache.pdfbox.pdfparser;
 
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
+import org.apache.pdfbox.cos.*;
+import org.apache.pdfbox.util.Charsets;
+
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.util.Arrays;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
-import org.apache.pdfbox.cos.COSArray;
-import org.apache.pdfbox.cos.COSBase;
-import org.apache.pdfbox.cos.COSBoolean;
-import org.apache.pdfbox.cos.COSDictionary;
-import org.apache.pdfbox.cos.COSDocument;
-import org.apache.pdfbox.cos.COSInteger;
-import org.apache.pdfbox.cos.COSName;
-import org.apache.pdfbox.cos.COSNull;
-import org.apache.pdfbox.cos.COSNumber;
-import org.apache.pdfbox.cos.COSObject;
-import org.apache.pdfbox.cos.COSObjectKey;
-import org.apache.pdfbox.cos.COSString;
-import org.apache.pdfbox.util.Charsets;
-
 
 import static org.apache.pdfbox.util.Charsets.ISO_8859_1;
 
@@ -768,8 +757,12 @@ public abstract class BaseParser
         {
             seqSource.unread(c);
         }
-        String string = new String(buffer.toByteArray(), Charsets.UTF_8);
+        String string = getStringForCOSName(buffer.toByteArray());
         return COSName.getPDFName(string, nameLength);
+    }
+
+    protected String getStringForCOSName(byte[] stringBytes) {
+        return new String(stringBytes, Charsets.UTF_8);
     }
 
     /**

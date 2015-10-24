@@ -52,6 +52,11 @@ public class ValidationParser extends PDFParser {
 	}
 
 	@Override
+	protected String getStringForCOSName(byte[] stringBytes) {
+		return new String(stringBytes);
+	}
+
+	@Override
 	protected int lastIndexOf(final char[] pattern, final byte[] buf, final int endOff) {
 		int offset = super.lastIndexOf(pattern, buf, endOff);
 		if (offset > 0 && Arrays.equals(pattern, EOF_MARKER)) {
