@@ -190,8 +190,17 @@ public class PDFParser extends COSParser
         // prepare decryption if necessary
         prepareDecryption();
     
-        parseTrailerValuesDynamically(trailer);
-    
+        COSBase base = parseTrailerValuesDynamically(trailer);
+        if (!(base instanceof COSDictionary))
+        {
+            throw new IOException("Expected root dictionary, but got this: " + base);
+        }
+        COSDictionary root = (COSDictionary) base;
+        // in some pdfs the type value "Catalog" is missing in the root object
+        if (isLenient() && !root.containsKey(COSName.TYPE))
+        {
+            root.setItem(COSName.TYPE, COSName.CATALOG);
+        }
         COSObject catalogObj = document.getCatalog();
         if (catalogObj != null && catalogObj.getObject() instanceof COSDictionary)
         {

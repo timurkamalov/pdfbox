@@ -231,9 +231,10 @@ public abstract class PDFont implements COSObjectable, PDFontLike
             }
 
             PDFontDescriptor fd = getFontDescriptor();
-            if (fd != null)
+            if (fd != null && fd.hasMissingWidth())
             {
-                return fd.getMissingWidth(); // default is 0
+                // get entry from /MissingWidth entry
+                return fd.getMissingWidth();
             }
         }
 
