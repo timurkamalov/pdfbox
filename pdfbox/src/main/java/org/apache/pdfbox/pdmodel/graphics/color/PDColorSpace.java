@@ -16,22 +16,18 @@
  */
 package org.apache.pdfbox.pdmodel.graphics.color;
 
-import org.apache.pdfbox.cos.COSBase;
 import org.apache.pdfbox.cos.COSArray;
+import org.apache.pdfbox.cos.COSBase;
 import org.apache.pdfbox.cos.COSName;
 import org.apache.pdfbox.cos.COSObject;
 import org.apache.pdfbox.pdmodel.MissingResourceException;
 import org.apache.pdfbox.pdmodel.PDResources;
 import org.apache.pdfbox.pdmodel.common.COSObjectable;
 
-import java.awt.Transparency;
-import java.awt.image.BufferedImage;
-import java.awt.image.ColorConvertOp;
-import java.awt.image.ComponentColorModel;
-import java.awt.image.WritableRaster;
-import java.io.IOException;
+import java.awt.*;
 import java.awt.color.ColorSpace;
-import java.awt.image.ColorModel;
+import java.awt.image.*;
+import java.io.IOException;
 
 /**
  * A color space specifies how the colours of graphics objects will be painted on the page.
@@ -191,6 +187,37 @@ public abstract class PDColorSpace implements COSObjectable
         else
         {
             throw new IOException("Expected a name or array but got: " + colorSpace);
+        }
+    }
+
+    /**
+     * Returns name of corresponding default color space if passed name
+     * is device depended color space
+     *
+     * @param resources current resource dictionary
+     * @param name color space name
+     * @return name of corresponding default color space if passed name
+     * 		   is device depended color space
+     */
+    public static COSName getDefaultValue(PDResources resources, COSName name) {
+        if (name.equals(COSName.DEVICECMYK) &&
+                resources.hasColorSpace(COSName.DEFAULT_CMYK))
+        {
+            return COSName.DEFAULT_CMYK;
+        }
+        else if (name.equals(COSName.DEVICERGB) &&
+                resources.hasColorSpace(COSName.DEFAULT_RGB))
+        {
+            return COSName.DEFAULT_RGB;
+        }
+        else if (name.equals(COSName.DEVICEGRAY) &&
+                resources.hasColorSpace(COSName.DEFAULT_GRAY))
+        {
+            return COSName.DEFAULT_GRAY;
+        }
+        else
+        {
+            return null;
         }
     }
 

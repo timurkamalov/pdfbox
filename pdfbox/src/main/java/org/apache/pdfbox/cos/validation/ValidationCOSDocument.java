@@ -16,7 +16,7 @@ public class ValidationCOSDocument extends COSDocument {
 	//contains clean first trailer of document
 	private COSDictionary firstPageTrailer;
 
-	private long postEOFDataSize;
+	private int postEOFDataSize;
 
 	private long headerOffset;
 	private String header;
@@ -50,11 +50,11 @@ public class ValidationCOSDocument extends COSDocument {
 		this.firstPageTrailer = firstPageTrailer;
 	}
 
-	public long getPostEOFDataSize() {
+	public int getPostEOFDataSize() {
 		return postEOFDataSize;
 	}
 
-	public void setPostEOFDataSize(long postEOFDataSize) {
+	public void setPostEOFDataSize(int postEOFDataSize) {
 		this.postEOFDataSize = postEOFDataSize;
 	}
 

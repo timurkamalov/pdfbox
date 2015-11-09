@@ -34,16 +34,46 @@ public class ValidationParser extends PDFParser {
 	}
 
 	@Override
+	public void initializeCOSDocument(ScratchFile scratchFile) {
+		this.document = new ValidationCOSDocument(scratchFile);
+	}
+
+	@Override
+	protected void initialParse() throws IOException {
+		COSDictionary trailer = null;
+		// parse startxref
+		long startXRefOffset = getStartxrefOffset();
+		if (startXRefOffset > -1) {
+			trailer = parseXref(startXRefOffset);
+		} else {
+			throw new IOException("Document doesn't contain startxref keyword");
+		}
+		// prepare decryption if necessary
+		prepareDecryption();
+
+		COSBase base = parseTrailerValuesDynamically(trailer);
+		if (!(base instanceof COSDictionary)) {
+			throw new IOException("Expected root dictionary, but got this: " + base);
+		}
+		COSDictionary root = (COSDictionary) base;
+		// in some pdfs the type value "Catalog" is missing in the root object
+		if (isLenient() && !root.containsKey(COSName.TYPE)) {
+			root.setItem(COSName.TYPE, COSName.CATALOG);
+		}
+		COSObject catalogObj = document.getCatalog();
+		if (catalogObj != null && catalogObj.getObject() instanceof COSDictionary) {
+			parseDictObjects((COSDictionary) catalogObj.getObject(), (COSName[]) null);
+			document.setDecrypted();
+		}
+		initialParseDone = true;
+	}
+
+	@Override
 	public PDDocument getPDDocument() throws IOException {
 		ValidationCOSDocument cosDocument = (ValidationCOSDocument) getDocument();
 		cosDocument.setLastTrailer(getLastTrailer());
 		cosDocument.setFirstPageTrailer(getFirstTrailer());
 		return super.getPDDocument();
-	}
-
-	@Override
-	protected void initializeCOSDocument(ScratchFile scratchFile) {
-		document = new ValidationCOSDocument(scratchFile);
 	}
 
 	@Override
@@ -73,20 +103,28 @@ public class ValidationParser extends PDFParser {
 
 	@Override
 	protected int lastIndexOf(final char[] pattern, final byte[] buf, final int endOff) {
+		// this is the offset of the last %%EOF sequence.
+		// nothing should be present after this sequence.
 		int offset = super.lastIndexOf(pattern, buf, endOff);
 		if (offset > 0 && Arrays.equals(pattern, EOF_MARKER)) {
-			// this is the offset of the last %%EOF sequence.
-			// nothing should be present after this sequence.
-			int tmpOffset = offset + pattern.length;
-			if (tmpOffset != buf.length) {
-				// EOL is authorized
-				final int postEOFDataSize = buf.length - tmpOffset;
-				if ((buf.length - tmpOffset) > 2
-						|| (buf.length - tmpOffset == 2 && (buf[tmpOffset] != 13 || buf[tmpOffset + 1] != 10))
-						|| (buf.length - tmpOffset == 1 && (buf[tmpOffset] != 13 && buf[tmpOffset] != 10))) {
-					((ValidationCOSDocument) document).setPostEOFDataSize(postEOFDataSize);
+			// If there's more than six bytes after the start offset of the last eof marker
+			// or 5th and 6th bytes are not EOL markers we consider the document as an invalid PDF/A document
+			// 0x0A - LF (10), 0x0D - CR (13)
+			int endOfEOF = offset + pattern.length;
+			int postEOFDateSize = buf.length - endOfEOF;
+			if (postEOFDateSize > 0) {
+				if (buf[endOfEOF] == 0x0D) {
+					int nextEOL = endOfEOF + 1;
+					if (nextEOL < buf.length && buf[nextEOL] == 0x0A) {
+						postEOFDateSize -= 2;
+					} else {
+						postEOFDateSize -= 1;
+					}
+				} else if (buf[endOfEOF] == 0x0A) {
+					postEOFDateSize -= 1;
 				}
 			}
+			((ValidationCOSDocument) this.document).setPostEOFDataSize(postEOFDateSize);
 		}
 		return offset;
 	}
@@ -319,7 +357,7 @@ public class ValidationParser extends PDFParser {
 					break;
 				}
 				/* This supports the corrupt table as reported in
-                 * PDFBOX-474 (XXXX XXX XX n) */
+				 * PDFBOX-474 (XXXX XXX XX n) */
 				if (splitString[splitString.length - 1].equals("n")) {
 					try {
 						int currOffset = Integer.parseInt(splitString[0]);
@@ -491,7 +529,12 @@ public class ValidationParser extends PDFParser {
 	protected void parseSuspensionObjects() {
 		for (COSObjectKey key : document.getXrefTable().keySet()) {
 			try {
-				source.seek(document.getXrefTable().get(key));
+				long position = document.getXrefTable().get(key);
+				if (position < 0) {
+					position = xrefTrailerResolver.getXrefTable().get(
+							new COSObjectKey(-position, key.getGeneration()));
+				}
+				source.seek(position);
 				COSObject suspensionObject = document.getObjectFromPool(key);
 				parseObjectDynamically(suspensionObject, false);
 			} catch (IOException e) {
@@ -611,7 +654,7 @@ public class ValidationParser extends PDFParser {
 			parseFileObject(object.getValue(), object.getKey(), pdfObject);
 		} else {
 			LOG.warn("Linearization dictionary is missed in document");
-			return ;
+			return;
 		}
 
 		if (pdfObject.getObject() != null && pdfObject.getObject() instanceof COSDictionary) {
@@ -620,7 +663,7 @@ public class ValidationParser extends PDFParser {
 				COSNumber length = (COSNumber) linearized.getItem(COSName.L);
 				if (length != null) {
 					boolean isLinearized = (length.longValue() == fileLen)
-											&& source.getPosition() < LINEARIZATION_SIZE;
+							&& source.getPosition() < LINEARIZATION_SIZE;
 					((ValidationCOSDocument) document).setIsLinearized(isLinearized);
 				}
 			}

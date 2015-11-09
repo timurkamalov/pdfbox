@@ -150,7 +150,7 @@ public class PDFParser extends COSParser
         initializeCOSDocument(scratchFile);
     }
 
-    protected void initializeCOSDocument(ScratchFile scratchFile) {
+    public void initializeCOSDocument(ScratchFile scratchFile) {
         document = new COSDocument(scratchFile);
     }
     
@@ -252,7 +252,7 @@ public class PDFParser extends COSParser
      * 
      * @throws IOException if something went wrong
      */
-    private void prepareDecryption() throws IOException
+    protected void prepareDecryption() throws IOException
     {
         COSBase trailerEncryptItem = document.getTrailer().getItem(COSName.ENCRYPT);
         if (trailerEncryptItem != null && !(trailerEncryptItem instanceof COSNull))
