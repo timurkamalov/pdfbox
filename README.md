@@ -1,4 +1,3 @@
-===================================================
 Apache PDFBox <http://pdfbox.apache.org/>
 ===================================================
 
@@ -7,6 +6,17 @@ documents. This project allows creation of new PDF documents, manipulation
 of existing documents and the ability to extract content from documents.
 PDFBox also includes several command line utilities. PDFBox is published
 under the Apache License, Version 2.0.
+
+PDFBox is a project of the Apache Software Foundation <http://www.apache.org/>.
+
+Binary Downloads
+----------------
+
+You can download binary versions for releases currently under development or older
+releases from out [Download Page](http://pdfbox.apache.org/download.cgi).
+
+Build
+-----
 
 You need Java 6 (or higher) and Maven 2 <http://maven.apache.org/> to
 build PDFBox. The recommended build command is:
@@ -17,10 +27,36 @@ The default build will compile the Java sources and package the binary
 classes into jar packages. See the Maven documentation for all the
 other available build options.
 
-PDFBox is a project of the Apache Software Foundation <http://www.apache.org/>.
+Contribute
+----------
+
+There are various ways to help us improve PDFBox. 
+
+- look at the [Issue Tracker](https://issues.apache.org/jira/browse/PDFBOX) to help us fix bugs.
+- answer questions on our [Users Mailing List](http://pdfbox.apache.org/mailinglists.html "Subscribe to Mailing List").
+- help us enhance the [Examples](https://svn.apache.org/repos/asf/pdfbox/trunk/examples/)
+- help us to enhance the [PDFBox Documentation](https://git-wip-us.apache.org/repos/asf/pdfbox-docs)
+or on [GitHub](https://github.com/apache/pdfbox-docs). 
+
+Support
+-------
+
+**Please follow the guidelines at our [Support Page](http://pdfbox.apache.org/support.html).**
+
+If you have questions about how to use PDFBox do ask on the
+[Users Mailing List](/mailinglists.html "Subscribe to Mailing List").
+This will get you help from the entire community.
+
+The PDFBox examples and the test code in the sources will also provide additional information.
+
+And there are additonal resources available on sites such as
+[Stack Overflow](http://stackoverflow.com/search?q=pdfbox "Stack Overflow").
+
+If you are sure you have found a bug the please report the issue in our 
+[Issue Tracker](https://issues.apache.org/jira/browse/PDFBOX). 
 
 Known Limitations and Problems
-==============================
+------------------------------
 
 See the issue tracker at https://issues.apache.org/jira/browse/PDFBOX for
 the full list of known issues and requested features. Some of the more
@@ -44,9 +80,9 @@ commont issues are:
    not sort the text.
 
 License (see also LICENSE.txt)
-==============================
+------------------------------
 
-Collective work: Copyright 2014 The Apache Software Foundation.
+Collective work: Copyright 2015 The Apache Software Foundation.
 
 Licensed to the Apache Software Foundation (ASF) under one or more
 contributor license agreements.  See the NOTICE file distributed with
@@ -64,7 +100,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 
 Export control
-==============
+--------------
 
 This distribution includes cryptographic software.  The country in  which
 you currently reside may have restrictions on the import,  possession, use,
@@ -85,5 +121,5 @@ for export under the License Exception ENC Technology Software Unrestricted
 
 The following provides more details on the included cryptographic software:
 
-    Apache PDFBox uses the Java Cryptography Architecture (JCA) and the
-    Bouncy Castle libraries for handling encryption in PDF documents.
+**Apache PDFBox uses the Java Cryptography Architecture (JCA) and the
+Bouncy Castle libraries for handling encryption in PDF documents.**

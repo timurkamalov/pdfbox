@@ -36,6 +36,18 @@ public class GlyphTable extends TTFTable
     private TTFDataStream data;
     private IndexToLocationTable loca;
     private int numGlyphs;
+    
+    private int cached = 0;
+    
+    /**
+     * Don't even bother to cache huge fonts.
+     */
+    private static final int MAX_CACHE_SIZE = 5000;
+    
+    /**
+     * Don't cache more glyphs than this.
+     */
+    private static final int MAX_CACHED_GLYPHS = 100;
 
     GlyphTable(TrueTypeFont font)
     {
@@ -54,7 +66,14 @@ public class GlyphTable extends TTFTable
         loca = ttf.getIndexToLocation();
         numGlyphs = ttf.getNumberOfGlyphs();
 
-        // we don't actually read the table yet because it can contain tens of thousands of glyphs
+        if (numGlyphs < MAX_CACHE_SIZE)
+        {
+            // don't cache the huge fonts to save memory
+            glyphs = new GlyphData[numGlyphs];
+            cached = 0;
+        }
+
+        // we don't actually read the complete table here because it can contain tens of thousands of glyphs
         this.data = data;
         initialized = true;
     }
@@ -143,12 +162,14 @@ public class GlyphTable extends TTFTable
         {
             return null;
         }
+        
+        if (glyphs != null && glyphs[gid] != null)
+        {
+            return glyphs[gid];
+        }
 
         synchronized (font)
         {
-            // save
-            long currentPosition = data.getCurrentPosition();
-
             // read a single glyph
             long[] offsets = loca.getOffsets();
 
@@ -160,9 +181,13 @@ public class GlyphTable extends TTFTable
             }
             else
             {
+                // save
+                long currentPosition = data.getCurrentPosition();
+
                 data.seek(getOffset() + offsets[gid]);
+
                 glyph = new GlyphData();
-                
+
                 HorizontalMetricsTable hmt = font.getHorizontalMetrics();
                 int leftSideBearing = hmt == null ? 0 : hmt.getLeftSideBearing(gid);
 
@@ -173,10 +198,17 @@ public class GlyphTable extends TTFTable
                 {
                     glyph.getDescription().resolve();
                 }
+                
+                // restore
+                data.seek(currentPosition);
+                
+                if (glyphs != null && glyphs[gid] == null && cached < MAX_CACHED_GLYPHS)
+                {
+                    glyphs[gid] = glyph;
+                    ++cached;
+                }
             }
-
-            // restore
-            data.seek(currentPosition);
+               
             return glyph;
         }
     }

@@ -20,6 +20,8 @@ import java.awt.geom.GeneralPath;
 import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
+import java.util.HashSet;
+import java.util.Set;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.fontbox.cmap.CMap;
@@ -48,6 +50,7 @@ public class PDType0Font extends PDFont implements PDVectorFont
     private boolean isCMapPredefined;
     private boolean isDescendantCJK;
     private PDCIDFontType2Embedder embedder;
+    private final Set<Integer> noUnicode = new HashSet<Integer>(); 
     
     /**
     * Loads a TTF to be embedded into a document as a Type 0 font.
@@ -215,9 +218,12 @@ public class PDType0Font extends PDFont implements PDVectorFont
      */
     private void fetchCMapUCS2() throws IOException
     {
-        // if the font is composite and uses a predefined cmap (excluding Identity-H/V) then
-        // or if its decendant font uses Adobe-GB1/CNS1/Japan1/Korea1
-        if (isCMapPredefined)
+        // if the font is composite and uses a predefined cmap (excluding Identity-H/V)
+        // or whose descendant CIDFont uses the Adobe-GB1, Adobe-CNS1, Adobe-Japan1, or
+        // Adobe-Korea1 character collection:
+        COSName name = dict.getCOSName(COSName.ENCODING);
+        if (isCMapPredefined && !(name == COSName.IDENTITY_H || name == COSName.IDENTITY_V) ||
+            isDescendantCJK)
         {
             // a) Map the character code to a CID using the font's CMap
             // b) Obtain the ROS from the font's CIDSystemInfo
@@ -225,32 +231,23 @@ public class PDType0Font extends PDFont implements PDVectorFont
             // d) Obtain the CMap with the constructed name
             // e) Map the CID according to the CMap from step d), producing a Unicode value
 
-            String cMapName = null;
-
-            // get the encoding CMap
-            COSBase encoding = dict.getDictionaryObject(COSName.ENCODING);
-            if (encoding instanceof COSName)
+            // todo: not sure how to interpret the PDF spec here, do we always override? or only when Identity-H/V?
+            String strName = null;
+            if (isDescendantCJK)
             {
-                cMapName = ((COSName)encoding).getName();
+                strName = descendantFont.getCIDSystemInfo().getRegistry() + "-" +
+                          descendantFont.getCIDSystemInfo().getOrdering() + "-" +
+                          descendantFont.getCIDSystemInfo().getSupplement();
             }
-            
-            if ("Identity-H".equals(cMapName) || "Identity-V".equals(cMapName))
+            else if (name != null)
             {
-                if (isDescendantCJK)
-                {
-                    cMapName = getCJKCMap(descendantFont.getCIDSystemInfo());
-                }
-                else
-                {
-                    // we can't map Identity-H or Identity-V to Unicode
-                    return;
-                }
+                strName = name.getName();
             }
             
             // try to find the corresponding Unicode (UC2) CMap
-            if (cMapName != null)
+            if (strName != null)
             {
-                CMap cMap = CMapManager.getPredefinedCMap(cMapName);
+                CMap cMap = CMapManager.getPredefinedCMap(strName);
                 if (cMap != null)
                 {
                     String ucs2Name = cMap.getRegistry() + "-" + cMap.getOrdering() + "-UCS2";
@@ -414,7 +411,7 @@ public class PDType0Font extends PDFont implements PDVectorFont
             return unicode;
         }
 
-        if (isCMapPredefined && cMapUCS2 != null)
+        if ((isCMapPredefined || isDescendantCJK) && cMapUCS2 != null)
         {
             // if the font is composite and uses a predefined cmap (excluding Identity-H/V) then
             // or if its decendant font uses Adobe-GB1/CNS1/Japan1/Korea1
@@ -427,9 +424,14 @@ public class PDType0Font extends PDFont implements PDVectorFont
         }
         else
         {
-            // if no value has been produced, there is no way to obtain Unicode for the character.
-            String cid = "CID+" + codeToCID(code);
-            LOG.warn("No Unicode mapping for " + cid + " (" + code + ") in font " + getName());
+            if (LOG.isWarnEnabled() && !noUnicode.contains(code))
+            {
+                // if no value has been produced, there is no way to obtain Unicode for the character.
+                String cid = "CID+" + codeToCID(code);
+                LOG.warn("No Unicode mapping for " + cid + " (" + code + ") in font " + getName());
+                // we keep track of which warnings have been issued, so we don't log multiple times
+                noUnicode.add(code);
+            }
             return null;
         }
     }

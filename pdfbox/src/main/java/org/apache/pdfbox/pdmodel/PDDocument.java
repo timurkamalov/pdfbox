@@ -284,7 +284,7 @@ public class PDDocument implements Closeable
         // Distinction of case for visual and non-visual signature
         if (visualSignature == null)
         {
-            prepareNonVisibleSignature(signatureField, acroForm);
+            prepareNonVisibleSignature(signatureField);
         }
         else
         {
@@ -417,13 +417,11 @@ public class PDDocument implements Closeable
         }
     }
 
-    private void prepareNonVisibleSignature(PDSignatureField signatureField, PDAcroForm acroForm)
+    private void prepareNonVisibleSignature(PDSignatureField signatureField)
             throws IOException
     {
         // Set rectangle for non-visual signature to rectangle array [ 0 0 0 0 ]
         signatureField.getWidgets().get(0).setRectangle(new PDRectangle());
-        // Clear AcroForm / Set DefaultRessource
-        acroForm.setDefaultResources(null);
         // Set empty Appearance-Dictionary
         PDAppearanceDictionary ap = new PDAppearanceDictionary();
         
@@ -848,11 +846,20 @@ public class PDDocument implements Closeable
                                   MemoryUsageSetting memUsageSetting) throws IOException
     {
         RandomAccessBufferedFileInputStream raFile = new RandomAccessBufferedFileInputStream(file);
-        PDFParser parser = new PDFParser(raFile, password, keyStore, alias, new ScratchFile(memUsageSetting));
         try
         {
-            parser.parse();
-            return parser.getPDDocument();
+            ScratchFile scratchFile = new ScratchFile(memUsageSetting);
+            try
+            {
+                PDFParser parser = new PDFParser(raFile, password, keyStore, alias, scratchFile);
+                parser.parse();
+                return parser.getPDDocument();
+            }
+            catch (IOException ioe)
+            {
+                IOUtils.closeQuietly(scratchFile);
+                throw ioe;
+            }
         }
         catch (IOException ioe)
         {
@@ -967,10 +974,18 @@ public class PDDocument implements Closeable
                                   String alias, MemoryUsageSetting memUsageSetting) throws IOException
     {
         ScratchFile scratchFile = new ScratchFile(memUsageSetting);
-        RandomAccessRead source = scratchFile.createBuffer(input);
-        PDFParser parser = new PDFParser(source, password, keyStore, alias, scratchFile);
-        parser.parse();
-        return parser.getPDDocument();
+        try
+        {
+            RandomAccessRead source = scratchFile.createBuffer(input);
+            PDFParser parser = new PDFParser(source, password, keyStore, alias, scratchFile);
+            parser.parse();
+            return parser.getPDDocument();
+        }
+        catch (IOException ioe)
+        {
+            IOUtils.closeQuietly(scratchFile);
+            throw ioe;
+        }
     }
 
     /**

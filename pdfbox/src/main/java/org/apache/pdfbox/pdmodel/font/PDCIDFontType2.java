@@ -37,6 +37,7 @@ import org.apache.pdfbox.cos.COSDictionary;
 import org.apache.pdfbox.cos.COSName;
 import org.apache.pdfbox.cos.COSStream;
 import org.apache.pdfbox.io.IOUtils;
+import org.apache.pdfbox.pdmodel.common.PDRectangle;
 import org.apache.pdfbox.pdmodel.common.PDStream;
 import org.apache.pdfbox.util.Matrix;
 
@@ -51,8 +52,6 @@ public class PDCIDFontType2 extends PDCIDFont
 
     private final TrueTypeFont ttf;
     private final int[] cid2gid;
-    private final Map<Integer, Integer> gid2cid;
-    private final boolean hasIdentityCid2Gid;
     private final boolean isEmbedded;
     private final boolean isDamaged;
     private final CmapSubtable cmap; // may be null
@@ -181,11 +180,7 @@ public class PDCIDFontType2 extends PDCIDFont
             ttf = ttfFont;
         }
         cmap = ttf.getUnicodeCmap(false);
-
         cid2gid = readCIDToGIDMap();
-        gid2cid = invert(cid2gid);
-        COSBase map = dict.getDictionaryObject(COSName.CID_TO_GID_MAP);
-        hasIdentityCid2Gid = map instanceof COSName && ((COSName) map).getName().equals("Identity");
     }
 
     @Override
@@ -202,6 +197,14 @@ public class PDCIDFontType2 extends PDCIDFont
     @Override
     public BoundingBox getBoundingBox() throws IOException
     {
+        if (getFontDescriptor() != null) {
+            PDRectangle bbox = getFontDescriptor().getFontBoundingBox();
+            if (bbox.getLowerLeftX() != 0 || bbox.getLowerLeftY() != 0 ||
+                bbox.getUpperRightX() != 0 || bbox.getUpperRightY() != 0) {
+                return new BoundingBox(bbox.getLowerLeftX(), bbox.getLowerLeftY(),
+                                       bbox.getUpperRightX(), bbox.getUpperRightY());
+            }
+        }
         return ttf.getFontBBox();
     }
 
@@ -274,20 +277,12 @@ public class PDCIDFontType2 extends PDCIDFont
             // font's 'cmap' table. The means by which this is accomplished are implementation-
             // dependent.
             
-            boolean hasUnicodeMap = parent.getCMapUCS2() != null;
-
             if (cid2gid != null)
             {
                 // Acrobat allows non-embedded GIDs - todo: can we find a test PDF for this?
+                LOG.warn("Using non-embedded GIDs in font " + getName());
                 int cid = codeToCID(code);
                 return cid2gid[cid];
-            }
-            else if (hasIdentityCid2Gid || !hasUnicodeMap)
-            {
-                // same as above, but for the default Identity CID2GIDMap or when there is no
-                // ToUnicode CMap to fallback to, see PDFBOX-2599 and PDFBOX-2560
-                // todo: can we find a test PDF for the Identity case?
-                return codeToCID(code);
             }
             else
             {
@@ -296,7 +291,9 @@ public class PDCIDFontType2 extends PDCIDFont
                 if (unicode == null)
                 {
                     LOG.warn("Failed to find a character mapping for " + code + " in " + getName());
-                    return 0;
+                    // Acrobat is willing to use the CID as a GID, even when the font isn't embedded
+                    // see PDFBOX-2599
+                    return codeToCID(code);
                 }
                 else if (unicode.length() > 1)
                 {
