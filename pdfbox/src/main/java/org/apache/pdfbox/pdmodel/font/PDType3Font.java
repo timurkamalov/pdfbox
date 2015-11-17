@@ -16,16 +16,9 @@
  */
 package org.apache.pdfbox.pdmodel.font;
 
-import java.awt.geom.GeneralPath;
-import java.io.IOException;
-import java.io.InputStream;
 import org.apache.fontbox.FontBoxFont;
 import org.apache.fontbox.util.BoundingBox;
-import org.apache.pdfbox.cos.COSArray;
-import org.apache.pdfbox.cos.COSBase;
-import org.apache.pdfbox.cos.COSDictionary;
-import org.apache.pdfbox.cos.COSName;
-import org.apache.pdfbox.cos.COSStream;
+import org.apache.pdfbox.cos.*;
 import org.apache.pdfbox.pdmodel.PDResources;
 import org.apache.pdfbox.pdmodel.common.PDRectangle;
 import org.apache.pdfbox.pdmodel.font.encoding.DictionaryEncoding;
@@ -33,6 +26,10 @@ import org.apache.pdfbox.pdmodel.font.encoding.Encoding;
 import org.apache.pdfbox.pdmodel.font.encoding.GlyphList;
 import org.apache.pdfbox.util.Matrix;
 import org.apache.pdfbox.util.Vector;
+
+import java.awt.geom.GeneralPath;
+import java.io.IOException;
+import java.io.InputStream;
 
 /**
  * A PostScript Type 3 Font.
@@ -326,14 +323,31 @@ public class PDType3Font extends PDSimpleFont
         String name = getEncoding().getName(code);
         if (!name.equals(".notdef"))
         {
-            COSStream stream;
-            stream = (COSStream)getCharProcs().getDictionaryObject(COSName.getPDFName(name));
-            if (stream == null)
-            {
-                return null;
-            }
-            return new PDType3CharProc(this, stream);
+            return getCharProcByName(COSName.getPDFName(name));
         }
         return null;
     }
+
+    /**
+     * Returns the stream of the glyph for the given character name
+     *
+     * @param name character name
+     * @return the stream to be used to render the glyph
+     */
+    public PDType3CharProc getCharProc(COSName name)
+    {
+        return getCharProcByName(name);
+    }
+
+    private PDType3CharProc getCharProcByName(COSName name)
+    {
+        COSStream stream;
+        stream = (COSStream)getCharProcs().getDictionaryObject(name);
+        if (stream == null)
+        {
+            return null;
+        }
+        return new PDType3CharProc(this, stream);
+    }
+
 }
