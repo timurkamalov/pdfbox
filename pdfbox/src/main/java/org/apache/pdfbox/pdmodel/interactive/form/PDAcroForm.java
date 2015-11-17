@@ -24,6 +24,8 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
 import org.apache.pdfbox.cos.COSArray;
 import org.apache.pdfbox.cos.COSBase;
 import org.apache.pdfbox.cos.COSDictionary;
@@ -51,6 +53,8 @@ import org.apache.pdfbox.util.Matrix;
  */
 public final class PDAcroForm implements COSObjectable
 {
+	private static final Log LOG = LogFactory.getLog(PDAcroForm.class);
+	
     private static final int FLAG_SIGNATURES_EXIST = 1;
     private static final int FLAG_APPEND_ONLY = 1 << 1;
 
@@ -152,18 +156,61 @@ public final class PDAcroForm implements COSObjectable
         }
         return fdf;
     }
-    
-    
+
     /**
      * This will flatten all form fields.
      * 
      * <p>Flattening a form field will take the current appearance and make that part
      * of the pages content stream. All form fields and annotations associated are removed.</p>
-     *  
+     * 
+     * <p>The appearances for the form fields widgets will <strong>not</strong> be generated<p>
+     * 
      * @throws IOException 
      */
     public void flatten() throws IOException
     {
+    	// for dynamic XFA forms there is no flatten as this would mean to do a rendering
+    	// from the XFA content into a static PDF.
+    	if (xfaIsDynamic())
+    	{
+    		LOG.warn("Flatten for a dynamix XFA form is not supported");
+    		return;
+    	}
+    	
+    	List<PDField> fields = new ArrayList<PDField>();
+    	for (PDField field: getFieldTree())
+    	{
+    		fields.add(field);
+    	}
+    	flatten(fields, false);
+    }
+    
+    
+    /**
+     * This will flatten the specified form fields.
+     * 
+     * <p>Flattening a form field will take the current appearance and make that part
+     * of the pages content stream. All form fields and annotations associated are removed.</p>
+     * 
+     * @param refreshAppearances if set to true the appearances for the form field widgets will be updated
+     * @throws IOException 
+     */
+    public void flatten(List<PDField> fields, boolean refreshAppearances) throws IOException
+    {
+    	// for dynamic XFA forms there is no flatten as this would mean to do a rendering
+    	// from the XFA content into a static PDF.
+    	if (xfaIsDynamic())
+    	{
+    		LOG.warn("Flatten for a dynamix XFA form is not supported");
+    		return;
+    	}
+    	
+    	// refresh the appearances if set
+    	if (refreshAppearances)
+    	{
+    		refreshAppearances();
+    	}
+    	
         // indicates if the original content stream
         // has been wrapped in a q...Q pair.
         boolean isContentStreamWrapped = false;
@@ -173,7 +220,7 @@ public final class PDAcroForm implements COSObjectable
         
         // Iterate over all form fields and their widgets and create a
         // FormXObject at the page content level from that
-        for (PDField field : getFieldTree())
+        for (PDField field : fields)
         {
             for (PDAnnotationWidget widget : field.getWidgets())
             {
@@ -219,8 +266,47 @@ public final class PDAcroForm implements COSObjectable
         
         // remove the fields
         setFields(Collections.<PDField>emptyList());
+        
+        // remove XFA for hybrid forms
+        dictionary.removeItem(COSName.XFA);
+        
     }    
 
+    /**
+     * Refreshes the appearance streams and appearance dictionaries for 
+     * the widget annotations of all fields.
+     * 
+     * @throws IOException
+     */
+    public void refreshAppearances() throws IOException
+    {
+        for (PDField field : getFieldTree())
+        {
+        	if (field instanceof PDTerminalField)
+        	{
+        		((PDTerminalField) field).constructAppearances();
+        	}
+        }
+    }
+
+    /**
+     * Refreshes the appearance streams and appearance dictionaries for 
+     * the widget annotations of the specified fields.
+     * 
+     * @throws IOException
+     */
+    public void refreshAppearances(List<PDField> fields) throws IOException
+    {
+        for (PDField field : fields)
+        {
+        	if (field instanceof PDTerminalField)
+        	{
+        		((PDTerminalField) field).constructAppearances();
+        	}
+        }
+    }
+    
+    
     /**
      * This will return all of the documents root fields.
      * 

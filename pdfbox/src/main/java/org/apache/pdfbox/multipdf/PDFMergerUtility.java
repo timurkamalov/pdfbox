@@ -45,7 +45,6 @@ import org.apache.pdfbox.pdmodel.PDDocumentNameDictionary;
 import org.apache.pdfbox.pdmodel.PDPage;
 import org.apache.pdfbox.pdmodel.PDResources;
 import org.apache.pdfbox.pdmodel.PageMode;
-import org.apache.pdfbox.pdmodel.common.COSArrayList;
 import org.apache.pdfbox.pdmodel.common.PDNumberTreeNode;
 import org.apache.pdfbox.pdmodel.common.PDStream;
 import org.apache.pdfbox.pdmodel.documentinterchange.logicalstructure.PDMarkInfo;
@@ -549,24 +548,39 @@ public class PDFMergerUtility
     private void mergeAcroForm(PDFCloneUtility cloner, PDAcroForm destAcroForm, PDAcroForm srcAcroForm)
             throws IOException
     {
-        List<PDField> srcFields = srcAcroForm.getFields();
+
+    	List<PDField> srcFields = srcAcroForm.getFields();
+
         if (srcFields != null)
         {
-            List<COSDictionary> destFields = new ArrayList<COSDictionary>();
-            // fixme: we're only iterating over the root fields, names of kids aren't being checked
-            for (PDField srcField : srcFields)
+        	// if a form is merged multiple times using PDFBox the newly generated
+        	// fields starting with dummyFieldName may already exist. We need to determine the last unique 
+        	// number used and increment that.
+        	final String prefix = "dummyFieldName";
+        	final int prefixLength = prefix.length();
+
+            for (PDField destField : destAcroForm.getFieldTree())
+            {
+            	String fieldName = destField.getPartialName();
+            	if (fieldName.startsWith(prefix))
+            	{
+            		nextFieldNum = Math.max(nextFieldNum, Integer.parseInt(fieldName.substring(prefixLength, fieldName.length()))+1);
+            	}
+            }
+        	
+            COSArray destFields = (COSArray) destAcroForm.getCOSObject().getItem(COSName.FIELDS);
+            for (PDField srcField : srcAcroForm.getFieldTree())
             {
                 COSDictionary dstField = (COSDictionary) cloner.cloneForNewDocument(srcField.getCOSObject());
                 // if the form already has a field with this name then we need to rename this field
                 // to prevent merge conflicts.
                 if (destAcroForm.getField(srcField.getFullyQualifiedName()) != null)
                 {
-                    dstField.setString(COSName.T, "dummyFieldName" + nextFieldNum++);
+                    dstField.setString(COSName.T, prefix + nextFieldNum++);
                 }
                 destFields.add(dstField);
             }
-            destAcroForm.getCOSObject().setItem(COSName.FIELDS,
-                                                COSArrayList.converterToCOSArray(destFields));
+            destAcroForm.getCOSObject().setItem(COSName.FIELDS,destFields);
         }
     }
 
@@ -687,5 +701,4 @@ public class PDFMergerUtility
     {
         return acroForm != null && acroForm.xfaIsDynamic();
     }
-
 }
