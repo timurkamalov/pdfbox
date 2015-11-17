@@ -16,26 +16,9 @@
  */
 package org.apache.pdfbox.pdmodel.graphics.image;
 
-import java.awt.Graphics2D;
-import java.awt.Paint;
-import java.awt.RenderingHints;
-import java.awt.image.BufferedImage;
-import java.awt.image.WritableRaster;
-import java.io.File;
-import java.io.FileInputStream;
-import java.io.IOException;
-import java.io.InputStream;
-import java.io.OutputStream;
-import java.lang.ref.SoftReference;
-import java.util.List;
-import javax.imageio.ImageIO;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.apache.pdfbox.cos.COSArray;
-import org.apache.pdfbox.cos.COSBase;
-import org.apache.pdfbox.cos.COSInputStream;
-import org.apache.pdfbox.cos.COSName;
-import org.apache.pdfbox.cos.COSStream;
+import org.apache.pdfbox.cos.*;
 import org.apache.pdfbox.io.IOUtils;
 import org.apache.pdfbox.pdmodel.PDDocument;
 import org.apache.pdfbox.pdmodel.PDResources;
@@ -44,6 +27,14 @@ import org.apache.pdfbox.pdmodel.common.PDStream;
 import org.apache.pdfbox.pdmodel.graphics.PDXObject;
 import org.apache.pdfbox.pdmodel.graphics.color.PDColorSpace;
 import org.apache.pdfbox.pdmodel.graphics.color.PDDeviceGray;
+
+import javax.imageio.ImageIO;
+import java.awt.*;
+import java.awt.image.BufferedImage;
+import java.awt.image.WritableRaster;
+import java.io.*;
+import java.lang.ref.SoftReference;
+import java.util.List;
 
 /**
  * An Image XObject.
@@ -490,6 +481,13 @@ public final class PDImageXObject extends PDXObject implements PDImage
             }
         }
         return colorSpace;
+    }
+
+    /**
+     * @return the image xobject resources
+     */
+    public PDResources getResources() {
+        return resources;
     }
 
     @Override
