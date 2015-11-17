@@ -12,10 +12,10 @@ public class ValidationCOSStream extends COSStream {
 	private Long originLength = 0L;
 	/** true if spacings around of 'stream' keyword comply PDF/A standard
 	 */
-	private Boolean isStreamSpacingsComplyPDFA = true;
+	private Boolean streamSpacingsComplyPDFA = true;
 	/** true if spacings around of 'endstream' keyword comply PDF/A standard
 	 */
-	private Boolean isEndStreamSpacingsComplyPDFA = true;
+	private Boolean endStreamSpacingsComplyPDFA = true;
 
 	public Long getOriginLength() {
 		return originLength;
@@ -25,20 +25,20 @@ public class ValidationCOSStream extends COSStream {
 		this.originLength = originLength;
 	}
 
-	public Boolean getIsStreamSpacingsComplyPDFA() {
-		return isStreamSpacingsComplyPDFA;
+	public Boolean getStreamSpacingsComplyPDFA() {
+		return streamSpacingsComplyPDFA;
 	}
 
-	public void setIsStreamSpacingsComplyPDFA(Boolean isStreamSpacingsComplyPDFA) {
-		this.isStreamSpacingsComplyPDFA = isStreamSpacingsComplyPDFA;
+	public void setStreamSpacingsComplyPDFA(Boolean streamSpacingsComplyPDFA) {
+		this.streamSpacingsComplyPDFA = streamSpacingsComplyPDFA;
 	}
 
-	public Boolean getIsEndStreamSpacingsComplyPDFA() {
-		return isEndStreamSpacingsComplyPDFA;
+	public Boolean getEndStreamSpacingsComplyPDFA() {
+		return endStreamSpacingsComplyPDFA;
 	}
 
-	public void setIsEndStreamSpacingsComplyPDFA(Boolean isEndStreamSpacingsComplyPDFA) {
-		this.isEndStreamSpacingsComplyPDFA = isEndStreamSpacingsComplyPDFA;
+	public void setEndStreamSpacingsComplyPDFA(Boolean endStreamSpacingsComplyPDFA) {
+		this.endStreamSpacingsComplyPDFA = endStreamSpacingsComplyPDFA;
 	}
 
 }

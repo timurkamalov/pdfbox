@@ -487,12 +487,12 @@ public class ValidationParser extends PDFParser {
 		if (whiteSpace == 13) {
 			whiteSpace = source.read();
 			if (whiteSpace != 10) {
-				stream.setIsStreamSpacingsComplyPDFA(Boolean.FALSE);
+				stream.setStreamSpacingsComplyPDFA(Boolean.FALSE);
 				source.rewind(1);
 			}
 		} else if (whiteSpace != 10) {
 			LOG.warn("Stream at " + source.getPosition() + " offset has no EOL marker.");
-			stream.setIsStreamSpacingsComplyPDFA(Boolean.FALSE);
+			stream.setStreamSpacingsComplyPDFA(Boolean.FALSE);
 			source.rewind(1);
 		}
 	}
@@ -517,7 +517,7 @@ public class ValidationParser extends PDFParser {
 			eolCount = 1;
 		} else {
 			LOG.warn("End of stream at " + source.getPosition() + " offset has no contain EOL marker.");
-			stream.setIsEndStreamSpacingsComplyPDFA(Boolean.FALSE);
+			stream.setEndStreamSpacingsComplyPDFA(Boolean.FALSE);
 		}
 
 		stream.setOriginLength(approximateLength - eolCount);
