@@ -568,7 +568,7 @@ public class ValidationParser extends PDFParser {
 		}
 		ValidationCOSString result = ValidationCOSString.parseHex(sBuf.toString());
 		result.setHexCount(hexCount);
-		result.setIsHexSymbols(isHexSymbols);
+		result.setContainsOnlyHex(isHexSymbols);
 
 		return result;
 	}

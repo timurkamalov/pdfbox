@@ -10,7 +10,7 @@ import java.io.IOException;
 public class ValidationCOSString extends COSString {
 
 	private Boolean isHex = Boolean.FALSE;
-	private Boolean isHexSymbols = true;
+	private boolean containsOnlyHex = true;
 	private Long hexCount = 0L;
 
 	public ValidationCOSString(byte[] bytes) {
@@ -35,12 +35,12 @@ public class ValidationCOSString extends COSString {
 		this.isHex = isHex;
 	}
 
-	public Boolean getIsHexSymbols() {
-		return isHexSymbols;
+	public boolean isContainsOnlyHex() {
+		return containsOnlyHex;
 	}
 
-	public void setIsHexSymbols(Boolean isHexSymbols) {
-		this.isHexSymbols = isHexSymbols;
+	public void setContainsOnlyHex(boolean isHexSymbols) {
+		this.containsOnlyHex = isHexSymbols;
 	}
 
 	public Long getHexCount() {
