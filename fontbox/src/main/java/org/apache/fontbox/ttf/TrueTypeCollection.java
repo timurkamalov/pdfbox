@@ -21,9 +21,6 @@ import java.io.Closeable;
 import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.List;
 
 /**
  * A TrueType Collection, now more properly known as a "Font Collection" as it may contain either
@@ -34,7 +31,8 @@ import java.util.List;
 public class TrueTypeCollection implements Closeable
 {
     private final TTFDataStream stream;
-    private final List<TrueTypeFont> fonts;
+    private final int numFonts;
+    private final long[] fontOffsets;
 
     /**
      * Creates a new TrueTypeCollection from a .ttc file.
@@ -67,7 +65,7 @@ public class TrueTypeCollection implements Closeable
     TrueTypeCollection(TTFDataStream stream) throws IOException
     {
         this.stream = stream;
-        
+
         // TTC header
         String tag = stream.readTag();
         if (!tag.equals("ttcf"))
@@ -75,69 +73,80 @@ public class TrueTypeCollection implements Closeable
             throw new IOException("Missing TTC header");
         }
         float version = stream.read32Fixed();
-        int numFonts = (int)stream.readUnsignedInt();
-        long[] fontOffsets = new long[numFonts];
+        numFonts = (int)stream.readUnsignedInt();
+        fontOffsets = new long[numFonts];
         for (int i = 0; i < numFonts; i++)
         {
             fontOffsets[i] = stream.readUnsignedInt();
         }
         if (version >= 2)
         {
+            // not used at this time
             int ulDsigTag = stream.readUnsignedShort();
             int ulDsigLength = stream.readUnsignedShort();
             int ulDsigOffset = stream.readUnsignedShort();
         }
-        
-        // lazy-load the fonts
-        List<TrueTypeFont> fonts = new ArrayList<TrueTypeFont>();
+    }
+    
+    /**
+     * Run the callback for each TT font in the collection.
+     * 
+     * @param trueTypeFontProcessor the object with the callback method.
+     * @throws IOException 
+     */
+    public void processAllFonts(TrueTypeFontProcessor trueTypeFontProcessor) throws IOException
+    {
         for (int i = 0; i < numFonts; i++)
         {
-            stream.seek(fontOffsets[i]);
-            if (stream.readTag().equals("OTTO"))
-            {
-                stream.seek(fontOffsets[i]);
-                OTFParser parser = new OTFParser(false, true);
-                OpenTypeFont otf = parser.parse(new TTCDataStream(stream));
-                fonts.add(otf);
-            }
-            else
-            {
-                stream.seek(fontOffsets[i]);
-                TTFParser parser = new TTFParser(false, true);
-                TrueTypeFont ttf = parser.parse(new TTCDataStream(stream));
-                fonts.add(ttf);
-            }
+            TrueTypeFont font = getFontAtIndex(i);
+            trueTypeFontProcessor.process(font);
         }
-        this.fonts = Collections.unmodifiableList(fonts);
     }
-
-    /**
-     * Returns the fonts in the collection, these may be {@link OpenTypeFont} instances.
-     */
-    public List<TrueTypeFont> getFonts()
+    
+    private TrueTypeFont getFontAtIndex(int idx) throws IOException
     {
-        return fonts;
-    }
-
-    /**
-     * Return a TrueType font by name.
-     *
-     * @param fontName the font name to search for.
-     * @return the found font or null if no font for that name was found.
-     * @throws IOException if there was an error reading the naming table of a font.
-     */
-    public TrueTypeFont getFontByName(String fontName) throws IOException
-    {
-        for (TrueTypeFont ttf : fonts)
+        stream.seek(fontOffsets[idx]);
+        TTFParser parser;
+        if (stream.readTag().equals("OTTO"))
         {
-            if (ttf.getName().equals(fontName))
+            parser = new OTFParser(false, true);
+        }
+        else
+        {
+            parser = new TTFParser(false, true);
+        }
+        stream.seek(fontOffsets[idx]);
+        return parser.parse(new TTCDataStream(stream));
+    }
+
+    /**
+     * Get a TT font from a collection.
+     * 
+     * @param name The postscript name of the font.
+     * @return The found font, nor null if none is found.
+     * @throws IOException 
+     */
+    public TrueTypeFont getFontByName(String name) throws IOException
+    {
+        for (int i = 0; i < numFonts; i++)
+        {
+            TrueTypeFont font = getFontAtIndex(i);
+            if (font.getName().equals(name))
             {
-                return ttf;
+                return font;
             }
         }
         return null;
     }
 
+    /**
+     * Implement the callback method to call {@link TrueTypeCollection#processAllFonts()}.
+     */
+    public interface TrueTypeFontProcessor
+    {
+        void process(TrueTypeFont ttf) throws IOException;
+    }
+    
     @Override
     public void close() throws IOException
     {
