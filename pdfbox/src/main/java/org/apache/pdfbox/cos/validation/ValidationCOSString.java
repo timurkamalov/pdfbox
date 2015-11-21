@@ -9,7 +9,6 @@ import java.io.IOException;
  */
 public class ValidationCOSString extends COSString {
 
-	private Boolean isHex = Boolean.FALSE;
 	private boolean containsOnlyHex = true;
 	private Long hexCount = 0L;
 
@@ -25,14 +24,6 @@ public class ValidationCOSString extends COSString {
 		ValidationCOSString result = (ValidationCOSString) COSString.parseHex(hex);
 		result.setIsHex(Boolean.TRUE);
 		return result;
-	}
-
-	public Boolean isHex() {
-		return isHex;
-	}
-
-	public void setIsHex(Boolean isHex) {
-		this.isHex = isHex;
 	}
 
 	public boolean isContainsOnlyHex() {

@@ -90,8 +90,13 @@ public class COSString extends COSBase
             }
         }
 
-        return new COSString(bytes.toByteArray());
+        return new COSString(bytes.toByteArray(), true);
     }
+
+    /**
+     * True if string represented in document is in hexadecimal form
+     */
+    protected boolean isHex = Boolean.FALSE;
 
     private byte[] bytes;
     private boolean forceHexForm;
@@ -105,6 +110,12 @@ public class COSString extends COSBase
     public COSString(byte[] bytes)
     {
         setValue(bytes);
+    }
+
+    public COSString(byte[] bytes, boolean isHex)
+    {
+        this(bytes);
+        this.isHex = isHex;
     }
 
     /**
@@ -210,6 +221,14 @@ public class COSString extends COSBase
     {
         // ASCII string
         return new String(bytes, Charsets.US_ASCII);
+    }
+
+    public boolean isHex() {
+        return isHex;
+    }
+
+    public void setIsHex(boolean hex) {
+        isHex = hex;
     }
 
     /**
