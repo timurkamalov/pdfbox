@@ -895,7 +895,7 @@ public abstract class BaseParser
         }
         case 'R':
             seqSource.read();
-            retval = new COSObject(null);
+            retval = initializeCOSObject(null);
             break;
         case (char)-1:
             return null;
@@ -1376,4 +1376,9 @@ public abstract class BaseParser
         }
         return buffer;
     }
+
+    public COSObject initializeCOSObject(COSBase baseObject) throws IOException {
+        return new COSObject(baseObject);
+    }
+
 }

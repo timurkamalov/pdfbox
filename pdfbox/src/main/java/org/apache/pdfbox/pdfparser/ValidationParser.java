@@ -40,6 +40,11 @@ public class ValidationParser extends PDFParser {
 	}
 
 	@Override
+	public COSObject initializeCOSObject(COSBase baseObject) throws IOException {
+		return new ValidationCOSObject(baseObject);
+	}
+
+	@Override
 	protected void initialParse() throws IOException {
 		COSDictionary trailer = null;
 		// parse startxref

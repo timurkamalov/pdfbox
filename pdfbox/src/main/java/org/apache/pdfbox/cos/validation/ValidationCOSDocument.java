@@ -1,9 +1,9 @@
 package org.apache.pdfbox.cos.validation;
 
-import org.apache.pdfbox.cos.COSDictionary;
-import org.apache.pdfbox.cos.COSDocument;
-import org.apache.pdfbox.cos.COSStream;
+import org.apache.pdfbox.cos.*;
 import org.apache.pdfbox.io.ScratchFile;
+
+import java.io.IOException;
 
 /**
  * @author Timur Kamalov
@@ -33,6 +33,11 @@ public class ValidationCOSDocument extends COSDocument {
 
 	public ValidationCOSDocument(ScratchFile scratchFile) {
 		super(scratchFile);
+	}
+
+	@Override
+	public COSObject initializeCOSObject(COSBase baseObject) throws IOException {
+		return new ValidationCOSObject(baseObject);
 	}
 
 	@Override

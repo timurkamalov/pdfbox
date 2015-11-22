@@ -531,7 +531,7 @@ public class COSDocument extends COSBase implements Closeable
         if (obj == null)
         {
             // this was a forward reference, make "proxy" object
-            obj = new COSObject(null);
+            obj = initializeCOSObject(null);
             if( key != null )
             {
                 obj.setObjectNumber(key.getNumber());
@@ -540,6 +540,10 @@ public class COSDocument extends COSBase implements Closeable
             }
         }
         return obj;
+    }
+
+    public COSObject initializeCOSObject(COSBase baseObject) throws IOException {
+        return new COSObject(baseObject);
     }
 
     /**
