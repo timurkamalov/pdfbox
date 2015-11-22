@@ -37,7 +37,7 @@ public class PDFParser extends COSParser
     private InputStream keyStoreInputStream = null;
     private String keyAlias = null;
 
-    private AccessPermission accessPermission;
+    protected AccessPermission accessPermission;
 
     /**
      * Constructor.

@@ -2,6 +2,7 @@ package org.apache.pdfbox.cos.validation;
 
 import org.apache.pdfbox.cos.COSDictionary;
 import org.apache.pdfbox.cos.COSDocument;
+import org.apache.pdfbox.cos.COSStream;
 import org.apache.pdfbox.io.ScratchFile;
 
 /**
@@ -32,6 +33,13 @@ public class ValidationCOSDocument extends COSDocument {
 
 	public ValidationCOSDocument(ScratchFile scratchFile) {
 		super(scratchFile);
+	}
+
+	@Override
+	public COSStream createCOSStream(COSDictionary dictionary) {
+		ValidationCOSStream stream = new ValidationCOSStream();
+		populateStreamDicionaryValues(stream, dictionary);
+		return stream;
 	}
 
 	public COSDictionary getLastTrailer() {

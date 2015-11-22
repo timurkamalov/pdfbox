@@ -9,6 +9,7 @@ import org.apache.pdfbox.cos.validation.ValidationCOSStream;
 import org.apache.pdfbox.cos.validation.ValidationCOSString;
 import org.apache.pdfbox.io.RandomAccessRead;
 import org.apache.pdfbox.io.ScratchFile;
+import org.apache.pdfbox.pdmodel.PDDocument;
 import org.apache.pdfbox.pdmodel.validation.ValidationPDDocument;
 
 import java.io.IOException;
@@ -73,7 +74,7 @@ public class ValidationParser extends PDFParser {
 		ValidationCOSDocument cosDocument = (ValidationCOSDocument) getDocument();
 		cosDocument.setLastTrailer(getLastTrailer());
 		cosDocument.setFirstPageTrailer(getFirstTrailer());
-		return (ValidationPDDocument) super.getPDDocument();
+		return new ValidationPDDocument( getDocument(), source, accessPermission );
 	}
 
 	@Override

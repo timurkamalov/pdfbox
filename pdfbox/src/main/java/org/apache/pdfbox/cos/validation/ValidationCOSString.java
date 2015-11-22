@@ -16,13 +16,9 @@ public class ValidationCOSString extends COSString {
 		super(bytes);
 	}
 
-	public ValidationCOSString(String text) {
-		super(text);
-	}
-
 	public static ValidationCOSString parseHex(String hex) throws IOException {
-		ValidationCOSString result = (ValidationCOSString) COSString.parseHex(hex);
-		result.setIsHex(Boolean.TRUE);
+		COSString string = COSString.parseHex(hex);
+		ValidationCOSString result = fromCOSString(string);
 		return result;
 	}
 
@@ -40,6 +36,12 @@ public class ValidationCOSString extends COSString {
 
 	public void setHexCount(Long hexCount) {
 		this.hexCount = hexCount;
+	}
+
+	public static ValidationCOSString fromCOSString(COSString string) {
+		ValidationCOSString result = new ValidationCOSString(string.getBytes());
+		result.setIsHex(string.isHex());
+		return result;
 	}
 
 }

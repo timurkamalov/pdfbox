@@ -76,7 +76,7 @@ public class COSDocument extends COSBase implements Closeable
 
     private boolean isXRefStream;
 
-    private ScratchFile scratchFile;
+    protected ScratchFile scratchFile;
 
     /**
      * Constructor. Uses main memory to buffer PDF streams.
@@ -118,11 +118,15 @@ public class COSDocument extends COSBase implements Closeable
     public COSStream createCOSStream(COSDictionary dictionary)
     {
         COSStream stream = new COSStream(scratchFile);
+        populateStreamDicionaryValues(stream, dictionary);
+        return stream;
+    }
+
+    protected void populateStreamDicionaryValues(COSStream stream, COSDictionary dictionary) {
         for (Map.Entry<COSName, COSBase> entry : dictionary.entrySet())
         {
             stream.setItem(entry.getKey(), entry.getValue());
         }
-        return stream;
     }
 
     /**
