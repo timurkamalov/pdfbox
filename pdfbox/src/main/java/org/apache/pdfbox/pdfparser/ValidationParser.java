@@ -45,6 +45,11 @@ public class ValidationParser extends PDFParser {
 	}
 
 	@Override
+	public COSString initializeCOSStirng(byte[] bytes) {
+		return new ValidationCOSString(bytes);
+	}
+
+	@Override
 	protected void initialParse() throws IOException {
 		COSDictionary trailer = null;
 		// parse startxref

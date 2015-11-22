@@ -548,7 +548,7 @@ public abstract class BaseParser
         {
             seqSource.unread(c);
         }
-        return new COSString(out.toByteArray());
+        return initializeCOSStirng(out.toByteArray());
     }
 
     /**
@@ -1379,6 +1379,10 @@ public abstract class BaseParser
 
     public COSObject initializeCOSObject(COSBase baseObject) throws IOException {
         return new COSObject(baseObject);
+    }
+
+    public COSString initializeCOSStirng(byte[] bytes) {
+        return new COSString(bytes);
     }
 
 }
