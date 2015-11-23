@@ -33,63 +33,7 @@ public class ValidationParser extends PDFParser {
 		super(source);
 	}
 
-	@Override
-	public void initializeCOSDocument(ScratchFile scratchFile) {
-		this.document = new ValidationCOSDocument(scratchFile);
-	}
-
-	@Override
-	public COSObject initializeCOSObject(COSBase baseObject) throws IOException {
-		return new ValidationCOSObject(baseObject);
-	}
-
-	@Override
-	public COSString initializeCOSString(byte[] bytes) {
-		return new ValidationCOSString(bytes);
-	}
-
-	@Override
-	protected void initialParse() throws IOException {
-		COSDictionary trailer = null;
-		// parse startxref
-		long startXRefOffset = getStartxrefOffset();
-		if (startXRefOffset > -1) {
-			trailer = parseXref(startXRefOffset);
-		} else {
-			throw new IOException("Document doesn't contain startxref keyword");
-		}
-		// prepare decryption if necessary
-		prepareDecryption();
-
-		COSBase base = parseTrailerValuesDynamically(trailer);
-		if (!(base instanceof COSDictionary)) {
-			throw new IOException("Expected root dictionary, but got this: " + base);
-		}
-		COSDictionary root = (COSDictionary) base;
-		// in some pdfs the type value "Catalog" is missing in the root object
-		if (isLenient() && !root.containsKey(COSName.TYPE)) {
-			root.setItem(COSName.TYPE, COSName.CATALOG);
-		}
-		COSObject catalogObj = document.getCatalog();
-		if (catalogObj != null && catalogObj.getObject() instanceof COSDictionary) {
-			parseDictObjects((COSDictionary) catalogObj.getObject(), (COSName[]) null);
-			document.setDecrypted();
-		}
-		initialParseDone = true;
-	}
-
-	@Override
-	public ValidationPDDocument getPDDocument() throws IOException {
-		ValidationCOSDocument cosDocument = (ValidationCOSDocument) getDocument();
-		cosDocument.setLastTrailer(getLastTrailer());
-		cosDocument.setFirstPageTrailer(getFirstTrailer());
-		return new ValidationPDDocument( getDocument(), source, accessPermission );
-	}
-
-	@Override
-	protected boolean parsePDFHeader() throws IOException {
-		return parseAndValidateHeader(PDF_HEADER, PDF_DEFAULT_VERSION);
-	}
+	// BaseParser overridden methods
 
 	@Override
 	protected COSString parseCOSHexString() throws IOException {
@@ -97,46 +41,163 @@ public class ValidationParser extends PDFParser {
 	}
 
 	@Override
-	protected void checkXrefOffsets() throws IOException {
-		strictCheckXrefOffsets();
-	}
-
-	@Override
-	protected boolean checkObjectHeader(String objectString) throws IOException {
-		return isObjHeader(objectString);
-	}
-
-	@Override
 	protected String getStringForCOSName(byte[] stringBytes) {
 		return new String(stringBytes);
 	}
 
+	// COSParser overridden methods
+
 	@Override
-	protected int lastIndexOf(final char[] pattern, final byte[] buf, final int endOff) {
-		// this is the offset of the last %%EOF sequence.
-		// nothing should be present after this sequence.
-		int offset = super.lastIndexOf(pattern, buf, endOff);
-		if (offset > 0 && Arrays.equals(pattern, EOF_MARKER)) {
-			// If there's more than six bytes after the start offset of the last eof marker
-			// or 5th and 6th bytes are not EOL markers we consider the document as an invalid PDF/A document
-			// 0x0A - LF (10), 0x0D - CR (13)
-			int endOfEOF = offset + pattern.length;
-			int postEOFDateSize = buf.length - endOfEOF;
-			if (postEOFDateSize > 0) {
-				if (buf[endOfEOF] == 0x0D) {
-					int nextEOL = endOfEOF + 1;
-					if (nextEOL < buf.length && buf[nextEOL] == 0x0A) {
-						postEOFDateSize -= 2;
-					} else {
-						postEOFDateSize -= 1;
+	protected boolean parsePDFHeader() throws IOException {
+		return parseAndValidateHeader(PDF_HEADER, PDF_DEFAULT_VERSION);
+	}
+
+	@Override
+	protected boolean parseXrefTable(long startByteOffset) throws IOException {
+		if (source.peek() != 'x') {
+			return false;
+		}
+		String xref = readString();
+		if (!xref.trim().equals("xref")) {
+			return false;
+		}
+
+		//check spacings after "xref" keyword
+		//pdf/a-1b specification, clause 6.1.4
+		int space;
+		space = source.read();
+		if (space == 0x0D) {
+			if (source.peek() == 0x0A) {
+				source.read();
+			}
+			if (!isDigit()) {
+				((ValidationCOSDocument) document).setIsXrefEOLMarkersComplyPDFA(Boolean.FALSE);
+			}
+		} else if (space != 0x0A || !isDigit()) {
+			((ValidationCOSDocument) document).setIsXrefEOLMarkersComplyPDFA(Boolean.FALSE);
+		}
+
+		// check for trailer after xref
+		String str = readString();
+		byte[] b = str.getBytes(ISO_8859_1);
+		source.rewind(b.length);
+
+		// signal start of new XRef
+		xrefTrailerResolver.nextXrefObj(startByteOffset, XrefTrailerResolver.XRefType.TABLE);
+
+		if (str.startsWith("trailer")) {
+			LOG.warn("skipping empty xref table");
+			return false;
+		}
+
+		// Xref tables can have multiple sections. Each starts with a starting object id and a count.
+		while (true) {
+			// first obj id
+			long currObjID = readObjectNumber();
+
+			space = source.read();
+			if (space != 0x20 || !isDigit()) {
+				((ValidationCOSDocument) document).setIsSubsectionHeaderSpaceSeparated(Boolean.FALSE);
+			}
+
+			// the number of objects in the xref table
+			long count = readLong();
+
+			skipSpaces();
+			for (int i = 0; i < count; i++) {
+				if (source.isEOF() || isEndOfName((char) source.peek())) {
+					break;
+				}
+				if (source.peek() == 't') {
+					break;
+				}
+				//Ignore table contents
+				String currentLine = readLine();
+				String[] splitString = currentLine.split("\\s");
+				if (splitString.length < 3) {
+					LOG.warn("invalid xref line: " + currentLine);
+					break;
+				}
+				/* This supports the corrupt table as reported in
+				 * PDFBOX-474 (XXXX XXX XX n) */
+				if (splitString[splitString.length - 1].equals("n")) {
+					try {
+						int currOffset = Integer.parseInt(splitString[0]);
+						int currGenID = Integer.parseInt(splitString[1]);
+						COSObjectKey objKey = new COSObjectKey(currObjID, currGenID);
+						xrefTrailerResolver.setXRef(objKey, currOffset);
+					} catch (NumberFormatException e) {
+						throw new IOException(e);
 					}
-				} else if (buf[endOfEOF] == 0x0A) {
-					postEOFDateSize -= 1;
+				} else if (!splitString[2].equals("f")) {
+					throw new IOException("Corrupt XRefTable Entry - ObjID:" + currObjID);
+				}
+				currObjID++;
+				skipSpaces();
+			}
+			skipSpaces();
+			if (!isDigit()) {
+				break;
+			}
+		}
+		return true;
+	}
+
+	@Override
+	protected COSStream parseCOSStream(COSDictionary dic) throws IOException {
+		ValidationCOSStream stream = (ValidationCOSStream) document.createCOSStream(dic);
+
+		// read 'stream'; this was already tested in parseObjectsDynamically()
+		readString();
+
+		// pdf/a-1b specification, clause 6.1.7
+		checkStreamSpacings(stream);
+		stream.setOriginLength(source.getPosition());
+
+		skipWhiteSpaces();
+
+          /*
+  		 * This needs to be dic.getItem because when we are parsing, the underlying object might still be null.
+           */
+		COSNumber streamLengthObj = getLength(dic.getItem(COSName.LENGTH), dic.getCOSName(COSName.TYPE));
+		if (streamLengthObj == null) {
+			throw new IOException("Missing length for stream.");
+		}
+
+		// get output stream to copy data to
+		if (streamLengthObj != null && validateStreamLength(streamLengthObj.longValue())) {
+			OutputStream out = stream.createRawOutputStream();
+			try {
+				readValidStream(out, streamLengthObj);
+			} finally {
+				out.close();
+				// restore original (possibly incorrect) length
+				stream.setItem(COSName.LENGTH, streamLengthObj);
+			}
+		} else {
+			OutputStream out = stream.createRawOutputStream();
+			try {
+				readUntilEndStream(new EndstreamOutputStream(out));
+			} finally {
+				out.close();
+				// restore original (possibly incorrect) length
+				if (streamLengthObj != null) {
+					stream.setItem(COSName.LENGTH, streamLengthObj);
+				} else {
+					stream.removeItem(COSName.LENGTH);
 				}
 			}
-			((ValidationCOSDocument) this.document).setPostEOFDataSize(postEOFDateSize);
 		}
-		return offset;
+
+		// pdf/a-1b specification, clause 6.1.7
+		checkEndStreamSpacings(stream, streamLengthObj.longValue());
+
+		String endStream = readString();
+		if (!endStream.equals(ENDSTREAM_STRING)) {
+			throw new IOException("Error reading stream, expected='endstream' actual='" + endStream + "' at offset " + source.getPosition());
+		}
+
+		return stream;
 	}
 
 	@Override
@@ -244,153 +305,97 @@ public class ValidationParser extends PDFParser {
 	}
 
 	@Override
-	protected COSStream parseCOSStream(COSDictionary dic) throws IOException {
-		ValidationCOSStream stream = (ValidationCOSStream) document.createCOSStream(dic);
-
-		// read 'stream'; this was already tested in parseObjectsDynamically()
-		readString();
-
-		// pdf/a-1b specification, clause 6.1.7
-		checkStreamSpacings(stream);
-		stream.setOriginLength(source.getPosition());
-
-		skipWhiteSpaces();
-
-        /*
-		 * This needs to be dic.getItem because when we are parsing, the underlying object might still be null.
-         */
-		COSNumber streamLengthObj = getLength(dic.getItem(COSName.LENGTH), dic.getCOSName(COSName.TYPE));
-		if (streamLengthObj == null) {
-			throw new IOException("Missing length for stream.");
-		}
-
-		// get output stream to copy data to
-		if (streamLengthObj != null && validateStreamLength(streamLengthObj.longValue())) {
-			OutputStream out = stream.createRawOutputStream();
-			try {
-				readValidStream(out, streamLengthObj);
-			} finally {
-				out.close();
-				// restore original (possibly incorrect) length
-				stream.setItem(COSName.LENGTH, streamLengthObj);
-			}
-		} else {
-			OutputStream out = stream.createRawOutputStream();
-			try {
-				readUntilEndStream(new EndstreamOutputStream(out));
-			} finally {
-				out.close();
-				// restore original (possibly incorrect) length
-				if (streamLengthObj != null) {
-					stream.setItem(COSName.LENGTH, streamLengthObj);
-				} else {
-					stream.removeItem(COSName.LENGTH);
+	protected int lastIndexOf(final char[] pattern, final byte[] buf, final int endOff) {
+		// this is the offset of the last %%EOF sequence.
+		// nothing should be present after this sequence.
+		int offset = super.lastIndexOf(pattern, buf, endOff);
+		if (offset > 0 && Arrays.equals(pattern, EOF_MARKER)) {
+			// If there's more than six bytes after the start offset of the last eof marker
+			// or 5th and 6th bytes are not EOL markers we consider the document as an invalid PDF/A document
+			// 0x0A - LF (10), 0x0D - CR (13)
+			int endOfEOF = offset + pattern.length;
+			int postEOFDateSize = buf.length - endOfEOF;
+			if (postEOFDateSize > 0) {
+				if (buf[endOfEOF] == 0x0D) {
+					int nextEOL = endOfEOF + 1;
+					if (nextEOL < buf.length && buf[nextEOL] == 0x0A) {
+						postEOFDateSize -= 2;
+					} else {
+						postEOFDateSize -= 1;
+					}
+				} else if (buf[endOfEOF] == 0x0A) {
+					postEOFDateSize -= 1;
 				}
 			}
+			((ValidationCOSDocument) this.document).setPostEOFDataSize(postEOFDateSize);
 		}
-
-		// pdf/a-1b specification, clause 6.1.7
-		checkEndStreamSpacings(stream, streamLengthObj.longValue());
-
-		String endStream = readString();
-		if (!endStream.equals(ENDSTREAM_STRING)) {
-			throw new IOException("Error reading stream, expected='endstream' actual='" + endStream + "' at offset " + source.getPosition());
-		}
-
-		return stream;
+		return offset;
 	}
 
 	@Override
-	protected boolean parseXrefTable(long startByteOffset) throws IOException {
-		if (source.peek() != 'x') {
-			return false;
-		}
-		String xref = readString();
-		if (!xref.trim().equals("xref")) {
-			return false;
-		}
-
-		//check spacings after "xref" keyword
-		//pdf/a-1b specification, clause 6.1.4
-		int space;
-		space = source.read();
-		if (space == 0x0D) {
-			if (source.peek() == 0x0A) {
-				source.read();
-			}
-			if (!isDigit()) {
-				((ValidationCOSDocument) document).setIsXrefEOLMarkersComplyPDFA(Boolean.FALSE);
-			}
-		} else if (space != 0x0A || !isDigit()) {
-			((ValidationCOSDocument) document).setIsXrefEOLMarkersComplyPDFA(Boolean.FALSE);
-		}
-
-		// check for trailer after xref
-		String str = readString();
-		byte[] b = str.getBytes(ISO_8859_1);
-		source.rewind(b.length);
-
-		// signal start of new XRef
-		xrefTrailerResolver.nextXrefObj(startByteOffset, XrefTrailerResolver.XRefType.TABLE);
-
-		if (str.startsWith("trailer")) {
-			LOG.warn("skipping empty xref table");
-			return false;
-		}
-
-		// Xref tables can have multiple sections. Each starts with a starting object id and a count.
-		while (true) {
-			// first obj id
-			long currObjID = readObjectNumber();
-
-			space = source.read();
-			if (space != 0x20 || !isDigit()) {
-				((ValidationCOSDocument) document).setIsSubsectionHeaderSpaceSeparated(Boolean.FALSE);
-			}
-
-			// the number of objects in the xref table
-			long count = readLong();
-
-			skipSpaces();
-			for (int i = 0; i < count; i++) {
-				if (source.isEOF() || isEndOfName((char) source.peek())) {
-					break;
-				}
-				if (source.peek() == 't') {
-					break;
-				}
-				//Ignore table contents
-				String currentLine = readLine();
-				String[] splitString = currentLine.split("\\s");
-				if (splitString.length < 3) {
-					LOG.warn("invalid xref line: " + currentLine);
-					break;
-				}
-				/* This supports the corrupt table as reported in
-				 * PDFBOX-474 (XXXX XXX XX n) */
-				if (splitString[splitString.length - 1].equals("n")) {
-					try {
-						int currOffset = Integer.parseInt(splitString[0]);
-						int currGenID = Integer.parseInt(splitString[1]);
-						COSObjectKey objKey = new COSObjectKey(currObjID, currGenID);
-						xrefTrailerResolver.setXRef(objKey, currOffset);
-					} catch (NumberFormatException e) {
-						throw new IOException(e);
-					}
-				} else if (!splitString[2].equals("f")) {
-					throw new IOException("Corrupt XRefTable Entry - ObjID:" + currObjID);
-				}
-				currObjID++;
-				skipSpaces();
-			}
-			skipSpaces();
-			if (!isDigit()) {
-				break;
-			}
-		}
-		return true;
+	protected boolean checkObjectHeader(String objectString) throws IOException {
+		return isObjHeader(objectString);
 	}
 
+	@Override
+	protected void checkXrefOffsets() throws IOException {
+		strictCheckXrefOffsets();
+	}
+
+	// PDFParser overridden methods
+
+	@Override
+	public ValidationPDDocument getPDDocument() throws IOException {
+		ValidationCOSDocument cosDocument = (ValidationCOSDocument) getDocument();
+		cosDocument.setLastTrailer(getLastTrailer());
+		cosDocument.setFirstPageTrailer(getFirstTrailer());
+		return new ValidationPDDocument( getDocument(), source, accessPermission );
+	}
+
+	@Override
+	protected void initialParse() throws IOException {
+		COSDictionary trailer = null;
+		// parse startxref
+		long startXRefOffset = getStartxrefOffset();
+		if (startXRefOffset > -1) {
+			trailer = parseXref(startXRefOffset);
+		} else {
+			throw new IOException("Document doesn't contain startxref keyword");
+		}
+		// prepare decryption if necessary
+		prepareDecryption();
+
+		COSBase base = parseTrailerValuesDynamically(trailer);
+		if (!(base instanceof COSDictionary)) {
+			throw new IOException("Expected root dictionary, but got this: " + base);
+		}
+		COSDictionary root = (COSDictionary) base;
+		// in some pdfs the type value "Catalog" is missing in the root object
+		if (isLenient() && !root.containsKey(COSName.TYPE)) {
+			root.setItem(COSName.TYPE, COSName.CATALOG);
+		}
+		COSObject catalogObj = document.getCatalog();
+		if (catalogObj != null && catalogObj.getObject() instanceof COSDictionary) {
+			parseDictObjects((COSDictionary) catalogObj.getObject(), (COSName[]) null);
+			document.setDecrypted();
+		}
+		initialParseDone = true;
+	}
+
+	@Override
+	public void initializeCOSDocument(ScratchFile scratchFile) {
+		this.document = new ValidationCOSDocument(scratchFile);
+	}
+
+	@Override
+	public COSObject initializeCOSObject(COSBase baseObject) throws IOException {
+		return new ValidationCOSObject(baseObject);
+	}
+
+	@Override
+	public COSString initializeCOSString(byte[] bytes) {
+		return new ValidationCOSString(bytes);
+	}
 
 	private boolean parseAndValidateHeader(String headerMarker, String defaultVersion) throws IOException {
 		/*
@@ -645,14 +650,14 @@ public class ValidationParser extends PDFParser {
 		return buffer.toString();
 	}
 
-	public COSDictionary getFirstTrailer() {
+	private COSDictionary getFirstTrailer() {
 		return xrefTrailerResolver.getFirstTrailer();
 	}
 
 	/**
 	 * @return last trailer in current document
 	 */
-	public COSDictionary getLastTrailer() {
+	private COSDictionary getLastTrailer() {
 		return xrefTrailerResolver.getLastTrailer();
 	}
 
