@@ -9,7 +9,6 @@ import org.apache.pdfbox.cos.validation.ValidationCOSStream;
 import org.apache.pdfbox.cos.validation.ValidationCOSString;
 import org.apache.pdfbox.io.RandomAccessRead;
 import org.apache.pdfbox.io.ScratchFile;
-import org.apache.pdfbox.pdmodel.PDDocument;
 import org.apache.pdfbox.pdmodel.validation.ValidationPDDocument;
 
 import java.io.IOException;
@@ -45,7 +44,7 @@ public class ValidationParser extends PDFParser {
 	}
 
 	@Override
-	public COSString initializeCOSStirng(byte[] bytes) {
+	public COSString initializeCOSString(byte[] bytes) {
 		return new ValidationCOSString(bytes);
 	}
 

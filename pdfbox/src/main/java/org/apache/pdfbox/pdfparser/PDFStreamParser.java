@@ -16,25 +16,19 @@
  */
 package org.apache.pdfbox.pdfparser;
 
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
+import org.apache.pdfbox.contentstream.PDContentStream;
+import org.apache.pdfbox.contentstream.operator.Operator;
+import org.apache.pdfbox.cos.*;
+import org.apache.pdfbox.pdmodel.common.PDStream;
+
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
-import org.apache.pdfbox.contentstream.PDContentStream;
-import org.apache.pdfbox.contentstream.operator.Operator;
-import org.apache.pdfbox.cos.COSBase;
-import org.apache.pdfbox.cos.COSBoolean;
-import org.apache.pdfbox.cos.COSDictionary;
-import org.apache.pdfbox.cos.COSName;
-import org.apache.pdfbox.cos.COSNull;
-import org.apache.pdfbox.cos.COSNumber;
-import org.apache.pdfbox.cos.COSObject;
-import org.apache.pdfbox.cos.COSStream;
-import org.apache.pdfbox.pdmodel.common.PDStream;
 
 /**
  * This will parse a PDF byte stream and extract operands and such.
@@ -52,7 +46,12 @@ public class PDFStreamParser extends BaseParser
     
     private static final int MAX_BIN_CHAR_TEST_LENGTH = 10;
     private final byte[] binCharTestArr = new byte[MAX_BIN_CHAR_TEST_LENGTH];
-    
+
+    public PDFStreamParser(InputStreamSource source) throws IOException
+    {
+        super(source);
+    }
+
     /**
      * Constructor.
      *
@@ -64,7 +63,7 @@ public class PDFStreamParser extends BaseParser
     @Deprecated
     public PDFStreamParser(PDStream stream) throws IOException
     {
-        super(new InputStreamSource(stream.createInputStream()));
+        this(new InputStreamSource(stream.createInputStream()));
     }
 
     /**
@@ -78,7 +77,7 @@ public class PDFStreamParser extends BaseParser
     @Deprecated
     public PDFStreamParser(COSStream stream) throws IOException
     {
-        super(new InputStreamSource(stream.createInputStream()));
+        this(new InputStreamSource(stream.createInputStream()));
     }
 
     /**
@@ -89,7 +88,7 @@ public class PDFStreamParser extends BaseParser
      */
     public PDFStreamParser(PDContentStream contentStream) throws IOException
     {
-        super(new InputStreamSource(contentStream.getContents()));
+        this(new InputStreamSource(contentStream.getContents()));
     }
     
     /**
@@ -100,7 +99,7 @@ public class PDFStreamParser extends BaseParser
      */
     public PDFStreamParser(byte[] bytes) throws IOException
     {
-        super(new InputStreamSource(new ByteArrayInputStream(bytes)));
+        this(new InputStreamSource(new ByteArrayInputStream(bytes)));
     }
 
     /**
