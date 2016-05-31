@@ -18,11 +18,7 @@ package org.apache.fontbox.cmap;
 
 import java.io.IOException;
 import java.io.InputStream;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.LinkedList;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 
 /**
  * This class represents a CMap file.
@@ -49,6 +45,8 @@ public class CMap
     // CID mappings
     private final Map<Integer,Integer> codeToCid = new HashMap<Integer,Integer>();
     private final List<CIDRange> codeToCidRanges = new LinkedList<CIDRange>();
+
+    private CMap usedCMap;
 
     private static final String SPACE = " ";
     private int spaceMapping = -1;
@@ -281,6 +279,8 @@ public class CMap
      */
     void useCmap( CMap cmap )
     {
+        this.usedCMap = cmap;
+
         this.codespaceRanges.addAll(cmap.codespaceRanges);
         this.charToUnicode.putAll(cmap.charToUnicode);
         this.codeToCid.putAll(cmap.codeToCid);
@@ -437,6 +437,10 @@ public class CMap
     public int getSpaceMapping()
     {
         return spaceMapping;
+    }
+
+    public CMap getUsedCMap() {
+        return this.usedCMap;
     }
 
     @Override
